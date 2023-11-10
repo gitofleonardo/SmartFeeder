@@ -59,8 +59,8 @@
     <!-- Expanded Smartspace -->
     <dimen name="expanded_smartspace_remoteviews_max_height">300dp</dimen>
     <dimen name="expanded_smartspace_remoteviews_max_height_minus_padding">268dp</dimen>
-    <dimen name="expanded_smartspace_widget_row_height">112dp</dimen>
-    <dimen name="expanded_smartspace_widget_column_width">96dp</dimen>
+    <dimen name="expanded_smartspace_widget_row_height">86dp</dimen>
+    <dimen name="expanded_smartspace_widget_column_width">82dp</dimen>
     <dimen name="expanded_doodle_height">100dp</dimen>
     <dimen name="enforced_rounded_corner_max_radius">16dp</dimen>
 
@@ -69,4 +69,6 @@
     <dimen name="snackbar_corner_radius">16dp</dimen>
 
     <dimen name="snackbar_height">56dp</dimen>
+
+    <dimen name="start_drag_threshold">10dp</dimen>
 </resources>

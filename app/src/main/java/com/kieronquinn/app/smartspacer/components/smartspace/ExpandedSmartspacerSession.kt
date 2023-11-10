@@ -276,7 +276,6 @@ class ExpandedSmartspacerSession(
             list.add(Item.Complications(complications.extractComplications(), isDark))
         }
         list.addAll(customWidgets)
-        list.add(Item.Footer(viewState.hasClickedAdd, isDark))
         return list
     }
 

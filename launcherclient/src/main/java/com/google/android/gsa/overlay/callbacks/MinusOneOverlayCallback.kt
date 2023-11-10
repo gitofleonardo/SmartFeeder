@@ -38,7 +38,7 @@ class MinusOneOverlayCallback(
                     if (!overlayControllerVar!!.isOpenState()) {
                         val slidingPanelLayoutVar = overlayControllerVar.slidingPanelLayout
                         if (slidingPanelLayoutVar!!.panelX < slidingPanelLayoutVar.mTouchSlop) {
-                            overlayControllerVar.slidingPanelLayout!!.BM(0)
+                            overlayControllerVar.slidingPanelLayout!!.setPanelX(0)
                             overlayControllerVar.mAcceptExternalMove = true
                             overlayControllerVar.scrollX = 0
                             overlayControllerVar.slidingPanelLayout!!.mForceDrag = true

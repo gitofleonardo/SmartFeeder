@@ -134,7 +134,7 @@ open class OverlayController(context: Context?, theme: Int, dialogTheme: Int) :
             if (i3 != 0) {
                 i2 = 750
             }
-            slidingPanelLayoutVar!!.fv(i2)
+            slidingPanelLayoutVar!!.openPanel(i2)
         }
     }
 

@@ -62,6 +62,7 @@
         android:text="@string/expanded_custom_widget_rearrange"
         android:textAllCaps="false"
         android:textAppearance="@style/TextAppearance.Smartspacer.Page.Popup"
-        tools:textAppearance="@style/TextAppearance.Smartspacer.Page.Popup.Preview" />
+        tools:textAppearance="@style/TextAppearance.Smartspacer.Page.Popup.Preview"
+        android:visibility="gone"/>
 
 </LinearLayout>

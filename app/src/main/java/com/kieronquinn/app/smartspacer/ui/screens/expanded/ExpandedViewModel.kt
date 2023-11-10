@@ -16,8 +16,10 @@ import com.kieronquinn.app.smartspacer.components.navigation.ExpandedNavigation
 import com.kieronquinn.app.smartspacer.components.smartspace.ExpandedSmartspacerSession
 import com.kieronquinn.app.smartspacer.components.smartspace.ExpandedSmartspacerSession.Item
 import com.kieronquinn.app.smartspacer.model.appshortcuts.AppShortcut
+import com.kieronquinn.app.smartspacer.repositories.DatabaseRepository
 import com.kieronquinn.app.smartspacer.repositories.ExpandedRepository
 import com.kieronquinn.app.smartspacer.repositories.ExpandedRepository.CustomExpandedAppWidgetConfig
+import com.kieronquinn.app.smartspacer.repositories.SearchRepository
 import com.kieronquinn.app.smartspacer.repositories.ShizukuServiceRepository
 import com.kieronquinn.app.smartspacer.repositories.SmartspacerSettingsRepository
 import com.kieronquinn.app.smartspacer.sdk.model.SmartspaceAction
@@ -28,6 +30,7 @@ import com.kieronquinn.app.smartspacer.sdk.model.expanded.ExpandedState.Shortcut
 import com.kieronquinn.app.smartspacer.sdk.model.uitemplatedata.BaseTemplateData
 import com.kieronquinn.app.smartspacer.sdk.utils.sendSafely
 import com.kieronquinn.app.smartspacer.utils.extensions.allowBackground
+import com.kieronquinn.app.smartspacer.utils.extensions.firstNotNull
 import com.kieronquinn.app.smartspacer.utils.extensions.lockscreenShowing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -44,6 +47,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Collections
 import java.util.UUID
 
 abstract class ExpandedViewModel: ViewModel() {
@@ -66,6 +70,7 @@ abstract class ExpandedViewModel: ViewModel() {
     abstract fun onAppWidgetReset(appWidgetId: Int)
     abstract fun onOptionsClicked(appWidgetId: Int)
     abstract fun onRearrangeClicked()
+    abstract fun moveItem(from: Int, to: Int)
 
     abstract fun onConfigureWidgetClicked(
         bindLauncher: ActivityResultLauncher<Intent>,
@@ -89,7 +94,8 @@ abstract class ExpandedViewModel: ViewModel() {
         data class Loaded(
             val isLocked: Boolean,
             val lightStatusIcons: Boolean,
-            val items: List<Item>
+            val items: List<Item>,
+            val searchItem: Item.Search
         ): State()
     }
 
@@ -162,6 +168,7 @@ abstract class ExpandedViewModel: ViewModel() {
 class ExpandedViewModelImpl(
     context: Context,
     private val expandedRepository: ExpandedRepository,
+    private val databaseRepository: DatabaseRepository,
     private val shizukuServiceRepository: ShizukuServiceRepository,
     private val settingsRepository: SmartspacerSettingsRepository,
     private val navigation: ExpandedNavigation
@@ -173,6 +180,9 @@ class ExpandedViewModelImpl(
     private var widgetBindState: WidgetBindState? = null
     private val isOverlay = MutableStateFlow<Boolean?>(null)
     private val isResumed = MutableStateFlow(false)
+    private val widgets = expandedRepository.expandedCustomAppWidgets
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val searchItem = MutableSharedFlow<Item.Search>()
 
     private val session = ExpandedSmartspacerSession(
         context,
@@ -180,8 +190,21 @@ class ExpandedViewModelImpl(
         ::onItemsChanged
     )
 
+    private val searchDefault = Item.Search(
+        null,
+        SearchRepository.SearchApp("", "", null, shouldTint = true, showLensAndMic = false, Intent(Intent.ACTION_WEB_SEARCH)),
+        null,
+        true,
+        0,
+        false
+    )
+
     private suspend fun onItemsChanged(items: List<Item>) {
-        this@ExpandedViewModelImpl.items.emit(items)
+        val searchItem = items.filterIsInstance<Item.Search>().firstOrNull() ?: searchDefault
+        this@ExpandedViewModelImpl.searchItem.emit(searchItem)
+
+        val widgetItems = items.filterIsInstance<Item.Widget>()
+        this@ExpandedViewModelImpl.items.emit(widgetItems)
     }
 
     private val hasDisplayOverOtherAppsPermission = combine(
@@ -197,8 +220,9 @@ class ExpandedViewModelImpl(
         settingsRepository.expandedModeEnabled.asFlow(),
         isLocked,
         items,
-        hasDisplayOverOtherAppsPermission
-    ) { expanded, locked, list, permission ->
+        hasDisplayOverOtherAppsPermission,
+        searchItem
+    ) { expanded, locked, list, permission, searchItem ->
         when {
             !permission && expanded -> {
                 State.PermissionRequired
@@ -206,7 +230,7 @@ class ExpandedViewModelImpl(
             expanded -> {
                 val search = list.filterIsInstance<Item.Search>().firstOrNull()
                 val isLightStatusBar = search?.isLightStatusBar ?: false
-                State.Loaded(locked, isLightStatusBar, list)
+                State.Loaded(locked, isLightStatusBar, list, searchItem)
             }
             else -> {
                 State.Disabled
@@ -399,6 +423,33 @@ class ExpandedViewModelImpl(
     override fun onCleared() {
         session.onDestroy()
         super.onCleared()
+    }
+
+    override fun moveItem(from: Int, to: Int) {
+        viewModelScope.launch {
+            val items = widgets.firstNotNull()
+            if (from < to) {
+                for (i in from until to) {
+                    items.swap(i, i + 1)
+                }
+            } else {
+                for (i in from downTo to + 1) {
+                    items.swap(i, i - 1)
+                }
+            }
+            items.forEachIndexed { index, item ->
+                item.index = index
+                databaseRepository.updateExpandedCustomAppWidget(item)
+            }
+        }
+    }
+
+    private fun <I> List<I>.swap(from: Int, to: Int) {
+        try {
+            Collections.swap(this, from, to)
+        }catch (e: IndexOutOfBoundsException){
+            //Concurrent modification?
+        }
     }
 
     data class WidgetBindState(

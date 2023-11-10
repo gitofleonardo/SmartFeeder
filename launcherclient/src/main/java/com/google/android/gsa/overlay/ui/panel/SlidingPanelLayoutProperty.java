@@ -1,18 +1,21 @@
 package com.google.android.gsa.overlay.ui.panel;
 
-import android.util.Property;
+import android.util.FloatProperty;
+import android.util.Log;
 
-final class SlidingPanelLayoutProperty extends Property {
+final class SlidingPanelLayoutProperty extends FloatProperty<SlidingPanelLayout> {
 
-    SlidingPanelLayoutProperty(Class cls, String str) {
-        super(cls, str);
+    SlidingPanelLayoutProperty(String str) {
+        super(str);
     }
 
-    public final /* synthetic */ Object get(Object obj) {
-        return ((SlidingPanelLayout) obj).panelX;
+    @Override
+    public void setValue(SlidingPanelLayout object, float value) {
+        object.setPanelX((int) value);
     }
 
-    public final /* synthetic */ void set(Object obj, Object obj2) {
-        ((SlidingPanelLayout) obj).BM((Integer) obj2);
+    @Override
+    public Float get(SlidingPanelLayout object) {
+        return (float) object.panelX;
     }
 }

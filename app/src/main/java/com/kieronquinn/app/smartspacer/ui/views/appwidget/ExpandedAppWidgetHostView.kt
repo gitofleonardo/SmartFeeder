@@ -3,6 +3,7 @@ package com.kieronquinn.app.smartspacer.ui.views.appwidget
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
+import android.view.View
 import android.view.ViewGroup
 import android.widget.RemoteViewsHidden
 import androidx.core.os.bundleOf
@@ -56,4 +57,24 @@ class ExpandedAppWidgetHostView: RoundedCornersEnforcingAppWidgetHostView {
         super.setAppWidget(appWidgetId, info)
     }
 
+    override fun measureChildWithMargins(
+        child: View,
+        parentWidthMeasureSpec: Int,
+        widthUsed: Int,
+        parentHeightMeasureSpec: Int,
+        heightUsed: Int
+    ) {
+        val parentWidth = MeasureSpec.getSize(parentWidthMeasureSpec)
+        val parentHeight = MeasureSpec.getSize(parentHeightMeasureSpec)
+
+        val lp = child.layoutParams as MarginLayoutParams
+        val childWidth = parentWidth - widthUsed - paddingLeft - paddingRight - lp.leftMargin -
+                lp.rightMargin
+        val childHeight = parentHeight - heightUsed - paddingTop - paddingBottom - lp.topMargin-
+                lp.bottomMargin
+
+        val childWidthSpec = MeasureSpec.makeMeasureSpec(childWidth, MeasureSpec.EXACTLY)
+        val childHeightSpec = MeasureSpec.makeMeasureSpec(childHeight, MeasureSpec.EXACTLY)
+        child.measure(childWidthSpec, childHeightSpec)
+    }
 }

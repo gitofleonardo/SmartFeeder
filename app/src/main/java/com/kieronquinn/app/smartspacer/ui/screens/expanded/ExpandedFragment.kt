@@ -18,17 +18,24 @@ import android.view.ContextThemeWrapper
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewTreeObserver.OnDrawListener
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
+import androidx.core.view.setPadding
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.DefaultItemAnimator
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.LayoutManager
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.bumptech.glide.Glide
 import com.kieronquinn.app.smartspacer.BuildConfig
 import com.kieronquinn.app.smartspacer.R
 import com.kieronquinn.app.smartspacer.components.blur.BlurProvider
@@ -58,9 +65,11 @@ import com.kieronquinn.app.smartspacer.ui.base.BoundFragment
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.BaseExpandedAdapter.ExpandedAdapterListener
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.ExpandedViewModel.State
 import com.kieronquinn.app.smartspacer.utils.extensions.awaitPost
+import com.kieronquinn.app.smartspacer.utils.extensions.dip
 import com.kieronquinn.app.smartspacer.utils.extensions.getContrastColor
 import com.kieronquinn.app.smartspacer.utils.extensions.getParcelableExtraCompat
 import com.kieronquinn.app.smartspacer.utils.extensions.isActivityCompat
+import com.kieronquinn.app.smartspacer.utils.extensions.isDarkMode
 import com.kieronquinn.app.smartspacer.utils.extensions.onApplyInsets
 import com.kieronquinn.app.smartspacer.utils.extensions.onClicked
 import com.kieronquinn.app.smartspacer.utils.extensions.whenCreated
@@ -77,6 +86,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.parcelize.Parcelize
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import kotlin.math.hypot
+import kotlin.math.min
 import com.kieronquinn.app.smartspacer.sdk.client.R as SDKR
 
 class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
@@ -124,6 +135,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
     private var lastSwipe: Long? = null
     private var popup: Balloon? = null
     private var topInset = 0
+    private val glide by lazy { Glide.with(requireContext()) }
 
     private val isOverlay by lazy {
         ExpandedActivity.isOverlay(requireActivity() as ExpandedActivity)
@@ -170,6 +182,10 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         requireContext().getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     }
 
+    private val itemTouchHelper by lazy {
+        ItemTouchHelper(ExpandedRearrangeItemTouchHelperCallback(viewModel, adapter))
+    }
+
     override fun onGetLayoutInflater(savedInstanceState: Bundle?): LayoutInflater {
         val inflater = super.onGetLayoutInflater(savedInstanceState)
         val theme = if(isDark){
@@ -196,8 +212,15 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         setupOverlaySwipe()
         setupDisabledButton()
         setupClose()
+        setupAddWidget()
         handleLaunchActionIfNeeded()
         viewModel.setup(isOverlay)
+    }
+
+    private fun setupAddWidget() {
+        binding.expandedSearchBox.expandedFooterButton.setOnClickListener {
+            onAddWidgetClicked()
+        }
     }
 
     override fun onDestroyView() {
@@ -231,9 +254,12 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
                 bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
             )
         }
-        root.onApplyInsets { _, insets ->
+        root.onApplyInsets { view, insets ->
             topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             viewModel.setTopInset(topInset)
+            view.updatePadding(
+                top = topInset
+            )
         }
         val lockedPadding = resources.getDimensionPixelSize(R.dimen.expanded_button_unlock_height)
         expandedRecyclerView.onApplyInsets { view, insets ->
@@ -251,10 +277,28 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
     }
 
     private fun setupRecyclerView() = with(binding.expandedRecyclerView) {
-        layoutManager = LinearLayoutManager(context)
+        layoutManager = createSpanLayoutManager()
         adapter = this@ExpandedFragment.adapter
         itemAnimator = PulseControlledItemAnimator()
+        itemTouchHelper.attachToRecyclerView(this)
         setOnScrollChangeListener(this@ExpandedFragment)
+    }
+
+    private fun createSpanLayoutManager(): LayoutManager {
+        val maxSpan = 4
+        val layoutManager = GridLayoutManager(requireContext(), maxSpan)
+        val lookup = object : SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int {
+                val item = this@ExpandedFragment.adapter.items[position]
+                if (item !is Item.Widget) {
+                    return maxSpan
+                }
+                val config = item.config ?: return maxSpan
+                return min(config.spanX, maxSpan)
+            }
+        }
+        layoutManager.spanSizeLookup = lookup
+        return layoutManager
     }
 
     override fun onResume() {
@@ -294,37 +338,108 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         when(state){
             is State.Loading -> {
                 binding.expandedLoading.isVisible = true
-                binding.expandedRecyclerView.isVisible = false
+                binding.expandedNestedScroll.isVisible = false
                 binding.expandedUnlockContainer.isVisible = false
                 binding.expandedDisabled.isVisible = false
                 binding.expandedPermission.isVisible = false
             }
             is State.Disabled -> {
                 binding.expandedLoading.isVisible = false
-                binding.expandedRecyclerView.isVisible = false
+                binding.expandedNestedScroll.isVisible = false
                 binding.expandedUnlockContainer.isVisible = false
                 binding.expandedDisabled.isVisible = true
                 binding.expandedPermission.isVisible = false
             }
             is State.PermissionRequired -> {
                 binding.expandedLoading.isVisible = false
-                binding.expandedRecyclerView.isVisible = false
+                binding.expandedNestedScroll.isVisible = false
                 binding.expandedUnlockContainer.isVisible = false
                 binding.expandedDisabled.isVisible = false
                 binding.expandedPermission.isVisible = true
             }
             is State.Loaded -> {
                 binding.expandedLoading.isVisible = false
-                binding.expandedRecyclerView.isVisible = true
+                binding.expandedNestedScroll.isVisible = true
                 binding.expandedUnlockContainer.isVisible = state.isLocked && !isOverlay
                 binding.expandedDisabled.isVisible = false
                 binding.expandedPermission.isVisible = false
                 setStatusBarLight(state.lightStatusIcons)
-                adapter.submitList(state.items) {
-                    whenResumed {
-                        adapterUpdateBus.emit(System.currentTimeMillis())
-                    }
-                }
+                adapter.submitList(state.items)
+                setup(state.searchItem)
+            }
+        }
+    }
+
+    fun setup(item: Item.Search) = with(binding.expandedSearchBox) {
+        expandedDoodle.isVisible = item.doodleImage != null
+        expandedSearchBox.root.isVisible = item.searchApp != null
+        setupSearch(item)
+        setupDoodle(item, root)
+    }
+
+    private fun setupSearch(item: Item.Search) = with(binding.expandedSearchBox.expandedSearchBox) {
+        val searchApp = item.searchApp ?: return@with
+        expandedSearchBoxMic.isVisible = searchApp.showLensAndMic
+        expandedSearchBoxLens.isVisible = searchApp.showLensAndMic
+        expandedSearchBoxSearch.isInvisible = searchApp.showLensAndMic
+        if (searchApp.icon != null) {
+            expandedSearchBoxIcon.setImageDrawable(searchApp.icon)
+        } else {
+            expandedSearchBoxIcon.setImageResource(R.drawable.ic_search)
+        }
+        if (searchApp.shouldTint) {
+            expandedSearchBoxIcon.imageTintList =
+                ColorStateList.valueOf(monet.getAccentColor(requireContext()))
+        } else {
+            expandedSearchBoxIcon.imageTintList = null
+        }
+        val iconPadding = if (searchApp.icon == null || searchApp.showLensAndMic) {
+            requireContext().resources.getDimensionPixelSize(R.dimen.margin_6)
+        } else 0
+        expandedSearchBoxIcon.updatePadding(iconPadding, iconPadding, iconPadding, iconPadding)
+        whenResumed {
+            root.onClicked().collect {
+                onSearchBoxClicked(searchApp)
+            }
+        }
+        whenResumed {
+            expandedSearchBoxLens.onClicked().collect {
+                onSearchLensClicked(searchApp)
+            }
+        }
+        whenResumed {
+            expandedSearchBoxMic.onClicked().collect {
+                onSearchMicClicked(searchApp)
+            }
+        }
+    }
+
+    private fun setupDoodle(
+        item: Item.Search, root: View
+    ) = with(binding.expandedSearchBox.expandedDoodle) {
+        val doodle = item.doodleImage
+        if(doodle != null) {
+            val url = if (context.isDarkMode) {
+                doodle.darkUrl ?: doodle.url
+            } else doodle.url
+            try {
+                glide.load(url).into(this)
+            } catch (e: Exception) {
+                //No-op
+            }
+            setPadding(context.dip(doodle.padding))
+            contentDescription = doodle.altText
+        }
+        if(item.searchBackgroundColor != null){
+            root.setBackgroundResource(R.drawable.background_expanded_header_solid)
+            root.backgroundTintList = ColorStateList.valueOf(item.searchBackgroundColor)
+        }else{
+            root.setBackgroundResource(R.drawable.background_expanded_header)
+            root.backgroundTintList = null
+        }
+        whenResumed {
+            onClicked().collect {
+                onDoodleClicked(doodle ?: return@collect)
             }
         }
     }
@@ -377,7 +492,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             ?: getAndClearOverlayTarget() ?: return@whenResumed
         //Await an adapter update if needed
         adapterUpdateBus.first {
-            adapter.currentList.isNotEmpty()
+            adapter.items.isNotEmpty()
         }
         binding.expandedRecyclerView.awaitPost()
         binding.expandedNestedScroll.scrollTo(0, action.scrollPosition)
@@ -392,7 +507,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
                 viewModel.onRearrangeClicked()
             }
             is OpenFromOverlayAction.OpenTarget -> {
-                val itemPosition = adapter.currentList.indexOfFirst {
+                val itemPosition = adapter.items.indexOfFirst {
                     it is Item.Target && it.target.smartspaceTargetId == action.id
                 }
                 if(itemPosition < 0) return@whenResumed
@@ -492,7 +607,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             ?.getParcelableCompat(KEY_EXTRA_FEEDBACK_INTENT, Intent::class.java)
             ?.takeIf { !it.shouldExcludeFromSmartspacer() }
         if(!canDismiss && aboutIntent == null && feedbackIntent == null) return
-        val position = adapter.currentList.indexOfFirst { item ->
+        val position = adapter.items.indexOfFirst { item ->
             item is Item.Target && item.target == target
         }
         if(position == -1) return
@@ -587,6 +702,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             }
         }
         this.popup = popup
+        startDrag(viewHolder)
     }
 
     override fun onWidgetDeleteClicked(widget: Item.RemovedWidget) {
@@ -646,7 +762,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         this.popup = popup
     }
 
-    override fun onCustomWidgetLongClicked(view: View, widget: Item.Widget) {
+    override fun onCustomWidgetLongClicked(viewHolder: ViewHolder, view: View, widget: Item.Widget) {
         lastSwipe?.let {
             if(System.currentTimeMillis() - it < MIN_SWIPE_DELAY){
                 return //Likely a swipe
@@ -706,14 +822,20 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             }
         }
         this.popup = popup
+        startDrag(viewHolder)
+    }
+
+    private fun startDrag(viewHolder: ViewHolder) {
+        itemTouchHelper.startDrag(viewHolder)
+        PredragCondition(viewHolder) {
+            popup?.dismiss()
+        }
     }
 
     override fun onScrollChange(
         view: View?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int
     ) {
         lastSwipe = System.currentTimeMillis()
-        popup?.dismiss()
-        popup = null
     }
 
     override fun shouldTrampolineLaunches(): Boolean = isOverlay
@@ -806,4 +928,28 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
 
     }
 
+    private class PredragCondition(val viewHolder: ViewHolder, val onEndCallback: () -> Unit): OnDrawListener {
+
+        val startTranX: Float = viewHolder.itemView.translationX
+        val startTranY: Float = viewHolder.itemView.translationY
+
+        val threshold: Float = viewHolder.itemView.context.resources
+            .getDimensionPixelSize(R.dimen.start_drag_threshold).toFloat()
+
+        init {
+            viewHolder.itemView.viewTreeObserver.addOnDrawListener(this)
+        }
+
+        override fun onDraw() {
+            val nowTranX = viewHolder.itemView.translationX
+            val nowTranY = viewHolder.itemView.translationY
+            val dist = hypot(nowTranX - startTranX, nowTranY - startTranY)
+            if (dist >= threshold) {
+                onEndCallback.invoke()
+                viewHolder.itemView.post {
+                    viewHolder.itemView.viewTreeObserver.removeOnDrawListener(this)
+                }
+            }
+        }
+    }
 }

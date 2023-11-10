@@ -8,7 +8,7 @@
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
     <!-- Intentional: Load all items to prevent widget reload where possible -->
-    <androidx.core.widget.NestedScrollView
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/expanded_nested_scroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -16,15 +16,27 @@
         app:layout_constraintBottom_toTopOf="@id/expanded_unlock_container"
         app:layout_constraintTop_toTopOf="parent">
 
-        <com.kieronquinn.app.smartspacer.ui.views.NestedRecyclerView
-            android:id="@+id/expanded_recycler_view"
+        <include layout="@layout/item_expanded_search"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingBottom="@dimen/expanded_button_unlock_height"
-            tools:listitem="@layout/smartspace_view_template_basic" />
+            android:layout_height="wrap_content"
+            android:id="@+id/expanded_search_box" />
 
-    </androidx.core.widget.NestedScrollView>
+        <FrameLayout
+            app:layout_constraintTop_toBottomOf="@+id/expanded_search_box"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:clipChildren="true">
+            <com.kieronquinn.app.smartspacer.ui.views.NestedRecyclerView
+                android:id="@+id/expanded_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingBottom="@dimen/expanded_button_unlock_height"
+                tools:listitem="@layout/smartspace_view_template_basic" />
+        </FrameLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
         android:id="@+id/expanded_disabled_icon"

@@ -26,7 +26,7 @@ import com.kieronquinn.app.smartspacer.ui.views.LifecycleAwareRecyclerView.ViewH
  *  **Note: Only supports [LinearLayoutManager], and assumes that the [Adapter] will be un-set when
  *  the fragment is destroyed**
  */
-open class LifecycleAwareRecyclerView : RecyclerView {
+open class LifecycleAwareRecyclerView : BouncyRecyclerView {
 
     constructor(context: Context, attributeSet: AttributeSet? = null, defStyleRes: Int):
             super(context, attributeSet, defStyleRes)

@@ -3,7 +3,7 @@ package com.google.android.gsa.overlay.ui.panel;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
-import android.util.Property;
+import android.util.FloatProperty;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
@@ -16,7 +16,7 @@ import com.google.android.gsa.overlay.base.SlidingPanelLayoutDragCallback;
 public class SlidingPanelLayout extends FrameLayout {
     private static final boolean uoK = false;
     private static final boolean uoL = false;
-    public static final Property PANEL_X = new SlidingPanelLayoutProperty(Integer.class, "panelX");
+    public static final FloatProperty<SlidingPanelLayout> PANEL_X = new SlidingPanelLayoutProperty("panelX");
     public float mDownX;
     public float mDownY;
     public int mActivePointerId = -1;
@@ -63,26 +63,34 @@ public class SlidingPanelLayout extends FrameLayout {
         super.addView(this.uoA);
     }
 
-    public final void BM(int i) {
-        if (i <= 1) {
-            i = 0;
-        }
+    public final void setPanelX(int x) {
         int measuredWidth = getMeasuredWidth();
-        this.mPanelPositionRatio = ((float) i) / ((float) measuredWidth);
-        this.panelX = Math.max(Math.min(i, measuredWidth), 0);
+        if (slidingPanelLayoutInterpolator.isFinished() && x > measuredWidth) {
+            x = measuredWidth + (x - measuredWidth) / 3;
+            x = Math.min(x, 2 * measuredWidth);
+        }
+        this.mPanelPositionRatio = ((float) x) / ((float) measuredWidth);
+        this.panelX = x;
         this.uoA.setTranslationX(this.mIsRtl ? (float) (-this.panelX) : (float) this.panelX);
         if (uoK) {
             this.uoA.setAlpha(Math.max(0.1f, this.decelerateInterpolator.getInterpolation(this.mPanelPositionRatio)));
         }
         if (this.dragCallback != null) {
-            this.dragCallback.onDragProgress(this.mPanelPositionRatio);
+            float progress = Math.max(0, Math.min(this.mPanelPositionRatio, 1));
+            this.dragCallback.onDragProgress(progress);
         }
     }
 
-    public final void fv(int i) {
+    public final void openPanel(int i) {
         cnF();
         this.mSettling = true;
-        this.slidingPanelLayoutInterpolator.dt(getMeasuredWidth(), i);
+        this.slidingPanelLayoutInterpolator.animate(getMeasuredWidth(), i);
+    }
+
+    public final void openPanel(float velocity) {
+        cnF();
+        this.mSettling = true;
+        this.slidingPanelLayoutInterpolator.animate(getMeasuredWidth(), velocity);
     }
 
     public final void closePanel(int i) {
@@ -94,7 +102,19 @@ public class SlidingPanelLayout extends FrameLayout {
             tVar.onPanelClosing(z);
         }
         this.mSettling = true;
-        this.slidingPanelLayoutInterpolator.dt(0, i);
+        this.slidingPanelLayoutInterpolator.animate(0, i);
+    }
+
+    public final void closePanel(float velocity) {
+        this.mIsPageMoving = true;
+        if (this.dragCallback != null) {
+            boolean z;
+            SlidingPanelLayoutDragCallback tVar = this.dragCallback;
+            z = this.mTouchState == 1;
+            tVar.onPanelClosing(z);
+        }
+        this.mSettling = true;
+        this.slidingPanelLayoutInterpolator.animate(0, velocity);
     }
 
     public final void em(View view) {
@@ -161,6 +181,7 @@ public class SlidingPanelLayout extends FrameLayout {
         float x;
         float y;
         int abs;
+        float velocity;
         switch (motionEvent.getAction() & MotionEvent.ACTION_MASK) {
             case MotionEvent.ACTION_DOWN:
                 boolean z;
@@ -187,7 +208,7 @@ public class SlidingPanelLayout extends FrameLayout {
                     return true;
                 }
                 this.mVelocityTracker.computeCurrentVelocity(1000, (float) this.mMaximumVelocity);
-                abs = (int) this.mVelocityTracker.getXVelocity(this.mActivePointerId);
+                velocity = abs = (int) this.mVelocityTracker.getXVelocity(this.mActivePointerId);
                 boolean z2 = this.mTotalMotionX > 25.0f && Math.abs(abs) > this.mFlingThresholdVelocity;
                 if (z2) {
                     if (this.mIsRtl) {
@@ -195,7 +216,7 @@ public class SlidingPanelLayout extends FrameLayout {
                     }
                     if (Math.abs(abs) < this.mMinFlingVelocity) {
                         if (abs >= 0) {
-                            fv(750);
+                            openPanel(750);
                         } else {//Todo: this else was not there initially
                             closePanel(750);
                         }
@@ -204,14 +225,14 @@ public class SlidingPanelLayout extends FrameLayout {
                         z2 = abs > 0;
                         abs = Math.round(Math.abs(measuredWidth / ((float) Math.max(this.mMinSnapVelocity, Math.abs(abs)))) * 1000.0f) * 4;
                         if (z2) {
-                            fv(abs);
+                            openPanel(velocity);
                         } else {
-                            closePanel(abs);
+                            closePanel(velocity);
                         }
                     }
                 } else {
                     if (this.panelX >= getMeasuredWidth() / 2) {
-                        fv(750);
+                        openPanel(750);
                     } else {//Todo: this else was not there initially
                         closePanel(750);
                     }
@@ -232,7 +253,7 @@ public class SlidingPanelLayout extends FrameLayout {
                     if (this.mIsRtl) {
                         y = -y;
                     }
-                    BM((int) (y + x));
+                    setPanelX((int) (y + x));
                     return true;
                 }
                 determineScrollingStart(motionEvent, 1.0f);
@@ -307,7 +328,7 @@ public class SlidingPanelLayout extends FrameLayout {
             this.uoA.measure(MeasureSpec.makeMeasureSpec(size, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(size2, MeasureSpec.EXACTLY));
         }
         setMeasuredDimension(size, size2);
-        BM((int) (((float) size) * this.mPanelPositionRatio));
+        setPanelX((int) (((float) size) * this.mPanelPositionRatio));
     }
 
     protected void onLayout(boolean z, int i, int i2, int i3, int i4) {
@@ -336,7 +357,7 @@ public class SlidingPanelLayout extends FrameLayout {
         this.mTouchState = 1;
         this.mIsPageMoving = true;
         this.mSettling = false;
-        this.slidingPanelLayoutInterpolator.cnP();
+        this.slidingPanelLayoutInterpolator.cancelAnimation();
         if (uoL) {
             setLayerType(2, null);
         }

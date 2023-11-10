@@ -2,12 +2,16 @@ package com.google.android.gsa.overlay.ui.panel;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.view.animation.Interpolator;
+
+import androidx.dynamicanimation.animation.DynamicAnimation;
+
+import com.google.android.gsa.overlay.ui.anim.SpringAnimationBuilder;
 
 final class SlidingPanelLayoutInterpolator extends AnimatorListenerAdapter implements Interpolator {
 
-    private ObjectAnimator mAnimator;
+    private ValueAnimator mAnimator;
     int mFinalX;
     private final SlidingPanelLayout slidingPanelLayout;
 
@@ -15,24 +19,43 @@ final class SlidingPanelLayoutInterpolator extends AnimatorListenerAdapter imple
         this.slidingPanelLayout = slidingPanelLayoutVar;
     }
 
-    public final void cnP() {
+    public final void cancelAnimation() {
         if (this.mAnimator != null) {
             this.mAnimator.removeAllListeners();
             this.mAnimator.cancel();
+            this.mAnimator = null;
         }
     }
 
-    public final void dt(int i, int i2) {
-        cnP();
-        this.mFinalX = i;
-        if (i2 > 0) {
-            this.mAnimator = ObjectAnimator.ofInt(this.slidingPanelLayout, SlidingPanelLayout.PANEL_X, i).setDuration((long) i2);
-            this.mAnimator.setInterpolator(this);
+    public final void animate(int finalX, int duration) {
+        cancelAnimation();
+        this.mFinalX = finalX;
+        if (duration > 0) {
+            this.mAnimator = createSpringAnimator(0);
             this.mAnimator.addListener(this);
             this.mAnimator.start();
             return;
         }
         onAnimationEnd(null);
+    }
+
+    public void animate(int finalX, float velocity) {
+        cancelAnimation();
+        this.mFinalX = finalX;
+        this.mAnimator = createSpringAnimator(velocity);
+        this.mAnimator.addListener(this);
+        this.mAnimator.start();
+    }
+
+    private ValueAnimator createSpringAnimator(float velocity) {
+        SpringAnimationBuilder builder = new SpringAnimationBuilder(slidingPanelLayout.getContext());
+        return builder.setDampingRatio(.8f)
+                .setStiffness(300)
+                .setStartValue(SlidingPanelLayout.PANEL_X.get(slidingPanelLayout))
+                .setEndValue(mFinalX)
+                .setStartVelocity(velocity)
+                .setMinimumVisibleChange(DynamicAnimation.MIN_VISIBLE_CHANGE_PIXELS)
+                .build(slidingPanelLayout, SlidingPanelLayout.PANEL_X);
     }
 
     public final boolean isFinished() {
@@ -41,7 +64,7 @@ final class SlidingPanelLayoutInterpolator extends AnimatorListenerAdapter imple
 
     public final void onAnimationEnd(Animator animator) {
         this.mAnimator = null;
-        this.slidingPanelLayout.BM(this.mFinalX);
+        this.slidingPanelLayout.setPanelX(this.mFinalX);
         SlidingPanelLayout slidingPanelLayoutVar = this.slidingPanelLayout;
         if (slidingPanelLayoutVar.mSettling) {
             slidingPanelLayoutVar.mSettling = false;

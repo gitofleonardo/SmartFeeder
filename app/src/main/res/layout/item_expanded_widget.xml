@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="@dimen/margin_8"
-    android:layout_marginBottom="@dimen/margin_16"
+    android:layout_marginBottom="@dimen/margin_8"
     android:paddingStart="@dimen/margin_8"
     android:paddingEnd="@dimen/margin_8">
 
@@ -57,4 +57,4 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</androidx.core.widget.NestedScrollView>
+</FrameLayout>

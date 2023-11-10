@@ -1,25 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@drawable/background_expanded_header"
-    android:layout_marginBottom="@dimen/margin_8"
+    android:paddingBottom="@dimen/margin_6"
+    android:paddingTop="@dimen/margin_6"
     android:orientation="vertical">
 
     <ImageView
+        app:layout_constraintTop_toTopOf="parent"
         android:id="@+id/expanded_doodle"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:padding="@dimen/margin_16" />
+        android:layout_height="60dp"/>
 
     <include
         android:id="@+id/expanded_search_box"
         layout="@layout/include_expanded_search_box"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/margin_16"
-        android:layout_marginTop="@dimen/margin_4"
+        android:layout_marginTop="@dimen/margin_6"
         android:layout_marginEnd="@dimen/margin_16"
-        android:layout_marginBottom="@dimen/margin_16" />
+        android:layout_marginBottom="@dimen/margin_4"
+        app:layout_constraintTop_toBottomOf="@id/expanded_doodle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/expanded_footer_button"/>
 
-</LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:layout_marginEnd="@dimen/margin_16"
+        android:id="@+id/expanded_footer_button"
+        style="@style/Widget.Material3.Button.IconButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:icon="@drawable/ic_fab_add"
+        app:iconTint="@color/search_icon_tint_primary"
+        app:backgroundTint="@color/expanded_search_box_background_color"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/expanded_search_box"
+        app:layout_constraintTop_toTopOf="@id/expanded_search_box"
+        app:layout_constraintBottom_toBottomOf="@id/expanded_search_box"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

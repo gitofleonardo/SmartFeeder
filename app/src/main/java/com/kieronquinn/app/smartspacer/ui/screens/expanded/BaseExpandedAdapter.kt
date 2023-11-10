@@ -47,7 +47,7 @@ interface BaseExpandedAdapter: KoinComponent {
         itemExpandedWidgetConfigure.setTextColor(tintColour)
         val longClickListener = View.OnLongClickListener {
             if(widget.isCustom && this@BaseExpandedAdapter is ExpandedAdapter){
-                onCustomWidgetLongClicked(it, widget)
+                onCustomWidgetLongClicked(this@setup, it, widget)
             }else{
                 onWidgetLongClicked(this@setup, widget.appWidgetId)
             }
@@ -126,7 +126,7 @@ interface BaseExpandedAdapter: KoinComponent {
         expandedRepository.destroyHosts(sessionId)
     }
 
-    fun onCustomWidgetLongClicked(view: View, widget: Item.Widget)
+    fun onCustomWidgetLongClicked(viewHolder: RecyclerView.ViewHolder, view: View, widget: Item.Widget)
     fun onWidgetLongClicked(viewHolder: ViewHolder, appWidgetId: Int?)
     fun onConfigureWidgetClicked(provider: AppWidgetProviderInfo, id: String?, config: CustomExpandedAppWidgetConfig?)
     fun onDeleteWidgetClicked(widget: Item.RemovedWidget)
@@ -140,7 +140,7 @@ interface BaseExpandedAdapter: KoinComponent {
         fun onDoodleClicked(doodleImage: DoodleImage)
         fun onAppShortcutClicked(appShortcut: AppShortcut)
         fun onAddWidgetClicked()
-        fun onCustomWidgetLongClicked(view: View, widget: Item.Widget)
+        fun onCustomWidgetLongClicked(viewHolder: RecyclerView.ViewHolder, view: View, widget: Item.Widget)
         fun onWidgetLongClicked(viewHolder: RecyclerView.ViewHolder, appWidgetId: Int?)
         fun onWidgetDeleteClicked(widget: Item.RemovedWidget)
     }

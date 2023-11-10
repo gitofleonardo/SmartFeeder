@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetProviderInfo
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
 import com.kieronquinn.app.smartspacer.components.smartspace.ExpandedSmartspacerSession.Item
 import com.kieronquinn.app.smartspacer.databinding.ItemExpandedRemovedWidgetBinding
 import com.kieronquinn.app.smartspacer.databinding.ItemExpandedWidgetBinding
@@ -93,8 +94,8 @@ class ExpandedRearrangeAdapter(
         listener.onWidgetLongClicked(viewHolder, appWidgetId)
     }
 
-    override fun onCustomWidgetLongClicked(view: View, widget: Item.Widget) {
-        listener.onCustomWidgetLongClicked(view, widget)
+    override fun onCustomWidgetLongClicked(viewHolder: RecyclerView.ViewHolder, view: View, widget: Item.Widget) {
+        listener.onCustomWidgetLongClicked(viewHolder, view, widget)
     }
 
     fun moveItem(indexFrom: Int, indexTo: Int): Boolean {

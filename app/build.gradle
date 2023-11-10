@@ -7,8 +7,6 @@ plugins {
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
     id 'dev.rikka.tools.refine'
     id 'com.google.protobuf'
-    id 'com.google.gms.google-services'
-    id 'com.google.firebase.crashlytics'
 }
 
 apply plugin: 'com.google.android.gms.oss-licenses-plugin'
@@ -20,7 +18,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.kieronquinn.app.smartspacer"
+        applicationId "com.hhvvg.smartfeeder"
         minSdk 29
         targetSdk 34
         versionCode tagCode
@@ -81,6 +79,7 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:2.8.1"
     implementation "androidx.core:core-remoteviews:1.0.0"
     implementation "androidx.security:security-crypto:1.1.0-alpha06"
+    implementation 'com.github.valkriaine:Bouncy:2.3'
     implementation project(path: ':proto')
 
     def room_version = "2.5.2"
@@ -102,9 +101,6 @@ dependencies {
 
     //Bypass hidden API restrictions
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:4.3'
-
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'com.google.android.gms:play-services-maps:18.2.0'
 
     implementation 'com.github.KieronQuinn:MonetCompat:0.4.1'
     implementation 'com.google.code.gson:gson:2.10.1'

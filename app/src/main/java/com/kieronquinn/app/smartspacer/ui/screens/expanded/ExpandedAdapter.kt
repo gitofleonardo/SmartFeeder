@@ -44,42 +44,15 @@ import com.kieronquinn.app.smartspacer.utils.extensions.whenResumed
 import com.kieronquinn.app.smartspacer.utils.remoteviews.WidgetContextWrapper
 import com.kieronquinn.monetcompat.core.MonetCompat
 import org.koin.core.component.inject
+import java.util.Collections
 
 class ExpandedAdapter(
-    recyclerView: LifecycleAwareRecyclerView,
+    recyclerView: RecyclerView,
     isDark: Boolean,
     private val sessionId: String,
     private val expandedAdapterListener: ExpandedAdapterListener,
     private val targetInteractionListener: SmartspaceTargetInteractionListener
-): LifecycleAwareRecyclerView.ListAdapter<Item, ViewHolder>(createDiffUtil(), recyclerView), BaseExpandedAdapter {
-
-    companion object {
-        fun createDiffUtil(): DiffUtil.ItemCallback<Item> {
-            return object: DiffUtil.ItemCallback<Item>() {
-                override fun areItemsTheSame(
-                    oldItem: Item,
-                    newItem: Item
-                ): Boolean {
-                    return oldItem.getStaticId() == newItem.getStaticId()
-                }
-
-                override fun areContentsTheSame(
-                    oldItem: Item,
-                    newItem: Item
-                ): Boolean {
-                    return when {
-                        oldItem is Item.Target && newItem is Item.Target -> {
-                            oldItem.target.equalsForUi(newItem.target)
-                        }
-                        oldItem is Item.Shortcuts && newItem is Item.Shortcuts -> {
-                            oldItem.shortcuts == newItem.shortcuts
-                        }
-                        else -> oldItem == newItem
-                    }
-                }
-            }
-        }
-    }
+): LifecycleAwareRecyclerView.Adapter<ViewHolder>(recyclerView), BaseExpandedAdapter {
 
     private val theme = if(isDark) {
         R.style.Theme_Smartspacer_Wallpaper_Dark
@@ -96,9 +69,13 @@ class ExpandedAdapter(
     override val isRearrange = false
     override val expandedRepository by inject<ExpandedRepository>()
 
+    var items: List<Item> = emptyList()
+
     override fun getItemViewType(position: Int): Int {
-        return currentList[position].type.ordinal
+        return items[position].type.ordinal
     }
+
+    override fun getItemCount(): Int = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return when(Type.values()[viewType]){
@@ -133,7 +110,7 @@ class ExpandedAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = currentList[position]
+        val item = items[position]
         when(holder){
             is ViewHolder.StatusBarSpace -> holder.setup(item as Item.StatusBarSpace)
             is ViewHolder.Search -> holder.setup(item as Item.Search)
@@ -323,8 +300,8 @@ class ExpandedAdapter(
         }
     }
 
-    override fun onCustomWidgetLongClicked(view: View, widget: Item.Widget) {
-        expandedAdapterListener.onCustomWidgetLongClicked(view, widget)
+    override fun onCustomWidgetLongClicked(viewHolder: RecyclerView.ViewHolder, view: View, widget: Item.Widget) {
+        expandedAdapterListener.onCustomWidgetLongClicked(viewHolder, view, widget)
     }
 
     override fun onWidgetLongClicked(viewHolder: ViewHolder, appWidgetId: Int?) {
@@ -343,4 +320,51 @@ class ExpandedAdapter(
         expandedAdapterListener.onConfigureWidgetClicked(provider, id, config)
     }
 
+    fun moveItem(indexFrom: Int, indexTo: Int): Boolean {
+        if (indexFrom < indexTo) {
+            for (i in indexFrom until indexTo) {
+                Collections.swap(items, i, i + 1)
+            }
+        } else {
+            for (i in indexFrom downTo indexTo + 1) {
+                Collections.swap(items, i, i - 1)
+            }
+        }
+        notifyItemMoved(indexFrom, indexTo)
+        return true
+    }
+
+    fun submitList(items: List<Item>) {
+        val diffResult = DiffUtil.calculateDiff(DiffCallback(this.items, items))
+        diffResult.dispatchUpdatesTo(this)
+        this.items = items
+    }
+
+    private class DiffCallback(val oldList: List<Item>, val newList: List<Item>): DiffUtil.Callback() {
+        override fun getOldListSize(): Int {
+            return oldList.size
+        }
+
+        override fun getNewListSize(): Int {
+            return newList.size
+        }
+
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition].getStaticId() == newList[newItemPosition].getStaticId()
+        }
+
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val oldItem = oldList[oldItemPosition]
+            val newItem = newList[newItemPosition]
+            return when {
+                oldItem is Item.Target && newItem is Item.Target -> {
+                    oldItem.target.equalsForUi(newItem.target)
+                }
+                oldItem is Item.Shortcuts && newItem is Item.Shortcuts -> {
+                    oldItem.shortcuts == newItem.shortcuts
+                }
+                else -> oldItem == newItem
+            }
+        }
+    }
 }

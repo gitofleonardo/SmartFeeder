@@ -145,7 +145,7 @@ class ExpandedRearrangeFragment: BoundFragment<FragmentExpandedRearrangeBinding>
         //No-op
     }
 
-    override fun onCustomWidgetLongClicked(view: View, widget: Item.Widget) {
+    override fun onCustomWidgetLongClicked(viewHolder: ViewHolder, view: View, widget: Item.Widget) {
         //No-op
     }
 

@@ -16,14 +16,14 @@ class OverlayControllerSlidingPanelLayout(private val overlayController: Overlay
             val abs2 = Math.abs(motionEvent.y - mDownY)
             if (java.lang.Float.compare(abs, 0.0f) != 0) {
                 abs = Math.atan((abs2 / abs).toDouble()).toFloat()
-                val obj2: Any?
-                obj2 = if (mIsRtl) {
+                val obj2: Any? = null
+                /*obj2 = if (mIsRtl) {
                     if (x < 0.0f) 1 else null
                 } else if (x > 0.0f) {
                     1 //TODO: different from source
                 } else {
                     null
-                }
+                }*/
                 if (!mIsPanelOpen || mIsPageMoving) {
                     obj = null
                 }

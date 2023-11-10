@@ -85,16 +85,16 @@ data class DoodleImage(
     var darkUrl: String?,
     val searchUrl: String?,
     val altText: String?,
-    val padding: Int = 16
+    val padding: Int = 0
 ) {
 
     companion object {
         val DEFAULT = DoodleImage(
             "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png",
             null,
+            "https://www.google.com",
             null,
-            null,
-            24
+            0
         )
     }
 

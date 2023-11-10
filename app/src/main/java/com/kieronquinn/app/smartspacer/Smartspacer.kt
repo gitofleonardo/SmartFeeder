@@ -8,6 +8,8 @@ import android.content.res.Resources
 import androidx.core.content.res.ResourcesCompat
 import androidx.work.Configuration
 import com.google.android.material.color.DynamicColors
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.ktx.initialize
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.kieronquinn.app.smartspacer.components.blur.BlurProvider
@@ -236,7 +238,6 @@ class Smartspacer: Application(), Configuration.Provider {
         single<SmartspacerSettingsRepository> { SmartspacerSettingsRepositoryImpl(get()) }
         single<ShizukuServiceRepository> { ShizukuServiceRepositoryImpl(get(), get()) }
         single<SystemSmartspaceRepository>(createdAtStart = true) { SystemSmartspaceRepositoryImpl(get(), get(), get(), get(), get()) }
-        single<AnalyticsRepository>(createdAtStart = true) { AnalyticsRepositoryImpl(get(), get()) }
         single<SmartspaceRepository> { SmartspaceRepositoryImpl(get(), get(), get(), get()) }
         single<TargetsRepository> { TargetsRepositoryImpl(get(), get()) }
         single<AppPredictionRepository>(createdAtStart = true) { AppPredictionRepositoryImpl(
@@ -341,6 +342,7 @@ class Smartspacer: Application(), Configuration.Provider {
             get(),
             get(),
             get(),
+            get(),
             get()
         ) }
         viewModel<ExpandedSettingsViewModel> { ExpandedSettingsViewModelImpl(get(), get(), get()) }
@@ -416,6 +418,7 @@ class Smartspacer: Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         if(isSafeMode()) return
+        Firebase.initialize(this)
         DynamicColors.applyToActivitiesIfAvailable(this)
         setupMonet()
     }

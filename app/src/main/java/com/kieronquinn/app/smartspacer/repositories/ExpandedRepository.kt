@@ -191,7 +191,9 @@ class ExpandedRepositoryImpl(
         it.startListening()
     }
 
-    override val widgetColumnWidth: Int = (maxWidgetWidth / 5f).toInt()
+    override val widgetColumnWidth: Int = context.resources.getDimensionPixelSize(
+        R.dimen.expanded_smartspace_widget_column_width
+    )
     override val widgetRowHeight: Int = context.resources.getDimensionPixelSize(
         R.dimen.expanded_smartspace_widget_row_height
     )
