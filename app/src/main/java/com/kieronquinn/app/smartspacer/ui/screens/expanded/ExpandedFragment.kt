@@ -782,7 +782,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             .setArrowSize(10)
             .setArrowPosition(0.5f)
             .setCornerRadius(16f)
-            .setBalloonAnimation(BalloonAnimation.FADE)
+            .setBalloonAnimation(BalloonAnimation.OVERSHOOT)
             .build()
         popup.showAlignBottom(view)
         popupView.expandedLongPressPopupDelete.setTextColor(textColour)
