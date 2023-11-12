@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/appbar_background_plugins"
-        app:layout_behavior=".utils.appbar.DragOptionalAppBarLayoutBehaviour">
+        app:layout_behavior="com.kieronquinn.app.smartspacer.utils.appbar.DragOptionalAppBarLayoutBehaviour">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
