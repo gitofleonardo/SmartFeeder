@@ -181,6 +181,9 @@ class ConfigurationNavigationImpl: NavigationImpl(), ConfigurationNavigation
 interface WidgetOptionsNavigation: BaseNavigation
 class WidgetOptionsNavigationImpl: NavigationImpl(), WidgetOptionsNavigation
 
+interface ExpandedProxyNavigation: BaseNavigation
+class ExpandedProxyNavigationImpl: NavigationImpl(), ExpandedProxyNavigation
+
 suspend fun NavHostFragment.setupWithNavigation(navigation: BaseNavigation) {
     navigation.navigationBus.collect {
         when(it){

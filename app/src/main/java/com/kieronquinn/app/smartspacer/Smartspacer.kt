@@ -105,6 +105,8 @@ import com.kieronquinn.app.smartspacer.ui.screens.expanded.addwidget.ExpandedAdd
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.addwidget.ExpandedAddWidgetBottomSheetViewModelImpl
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.options.ExpandedWidgetOptionsBottomSheetViewModel
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.options.ExpandedWidgetOptionsBottomSheetViewModelImpl
+import com.kieronquinn.app.smartspacer.ui.screens.expanded.proxy.ExpandedProxyViewModel
+import com.kieronquinn.app.smartspacer.ui.screens.expanded.proxy.ExpandedProxyViewModelImpl
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.rearrange.ExpandedRearrangeViewModel
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.rearrange.ExpandedRearrangeViewModelImpl
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.settings.ExpandedSettingsViewModel
@@ -255,6 +257,7 @@ class Smartspacer: Application(), Configuration.Provider {
         single<ConfigurationNavigation> { ConfigurationNavigationImpl() }
         single<WidgetOptionsNavigation> { WidgetOptionsNavigationImpl() }
         single<ExpandedNavigation> { ExpandedNavigationImpl() }
+        single<ExpandedProxyNavigation> { ExpandedProxyNavigationImpl() }
         single<DatabaseRepository> { DatabaseRepositoryImpl(get()) }
         single<RequirementsRepository> { RequirementsRepositoryImpl(get(), get()) }
         single<MediaRepository>(createdAtStart = true) { MediaRepositoryImpl(get()) }
@@ -342,6 +345,10 @@ class Smartspacer: Application(), Configuration.Provider {
             get(),
             get(),
             get(),
+            get(),
+            get()
+        ) }
+        viewModel<ExpandedProxyViewModel> { ExpandedProxyViewModelImpl(
             get(),
             get()
         ) }

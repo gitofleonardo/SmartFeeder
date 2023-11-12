@@ -135,6 +135,12 @@
             android:exported="false"
             android:theme="@style/Theme.Smartspacer.Wallpaper" />
 
+        <activity
+            android:name=".ui.activities.ExpandedProxyActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.Smartspacer.Transparent" />
+
         <activity-alias
             android:name=".ui.activities.ExportedExpandedActivity"
             android:exported="true"

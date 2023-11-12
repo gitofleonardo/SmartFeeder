@@ -59,12 +59,13 @@ import com.kieronquinn.app.smartspacer.sdk.model.expanded.ExpandedState.Shortcut
 import com.kieronquinn.app.smartspacer.sdk.utils.getParcelableCompat
 import com.kieronquinn.app.smartspacer.sdk.utils.shouldExcludeFromSmartspacer
 import com.kieronquinn.app.smartspacer.ui.activities.ExpandedActivity
+import com.kieronquinn.app.smartspacer.ui.activities.ExpandedProxyActivity
 import com.kieronquinn.app.smartspacer.ui.activities.MainActivity
 import com.kieronquinn.app.smartspacer.ui.activities.OverlayTrampolineActivity
 import com.kieronquinn.app.smartspacer.ui.base.BoundFragment
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.BaseExpandedAdapter.ExpandedAdapterListener
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.ExpandedViewModel.State
-import com.kieronquinn.app.smartspacer.utils.extensions.awaitPost
+import com.kieronquinn.app.smartspacer.ui.screens.expanded.proxy.ExpandedProxyFragment
 import com.kieronquinn.app.smartspacer.utils.extensions.dip
 import com.kieronquinn.app.smartspacer.utils.extensions.getContrastColor
 import com.kieronquinn.app.smartspacer.utils.extensions.getParcelableExtraCompat
@@ -213,7 +214,6 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         setupDisabledButton()
         setupClose()
         setupAddWidget()
-        handleLaunchActionIfNeeded()
         viewModel.setup(isOverlay)
     }
 
@@ -487,42 +487,6 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         }
     }
 
-    private fun handleLaunchActionIfNeeded() = whenResumed {
-        val action = getAndClearOverlayAction()
-            ?: getAndClearOverlayTarget() ?: return@whenResumed
-        //Await an adapter update if needed
-        adapterUpdateBus.first {
-            adapter.items.isNotEmpty()
-        }
-        binding.expandedRecyclerView.awaitPost()
-        binding.expandedNestedScroll.scrollTo(0, action.scrollPosition)
-        when(action){
-            is OpenFromOverlayAction.ConfigureWidget -> {
-                onConfigureWidgetClicked(action.info, action.id, action.config)
-            }
-            is OpenFromOverlayAction.AddWidget -> {
-                onAddWidgetClicked()
-            }
-            is OpenFromOverlayAction.Rearrange -> {
-                viewModel.onRearrangeClicked()
-            }
-            is OpenFromOverlayAction.OpenTarget -> {
-                val itemPosition = adapter.items.indexOfFirst {
-                    it is Item.Target && it.target.smartspaceTargetId == action.id
-                }
-                if(itemPosition < 0) return@whenResumed
-                val itemView = binding.expandedRecyclerView
-                    .findViewHolderForAdapterPosition(itemPosition)?.itemView
-                    ?: return@whenResumed
-                val scrollTo = (itemView.top - topInset).coerceAtLeast(0)
-                binding.expandedNestedScroll.scrollTo(0, scrollTo)
-            }
-            is OpenFromOverlayAction.Options -> {
-                viewModel.onOptionsClicked(action.appWidgetId)
-            }
-        }
-    }
-
     override fun onSearchLensClicked(searchApp: SearchApp) {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             data = Uri.parse("google://lens")
@@ -644,7 +608,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
 
     override fun onAddWidgetClicked() {
         if(isOverlay){
-            launchOverlayAction(OpenFromOverlayAction.AddWidget(getScroll()))
+            launchProxyOverlayAction(OpenFromOverlayAction.AddWidget(getScroll()))
         }else{
             unlockAndInvoke {
                 viewModel.onAddWidgetClicked()
@@ -801,7 +765,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             popup.dismiss()
             val appWidgetId = widget.appWidgetId ?: return@setOnClickListener
             if(isOverlay){
-                launchOverlayAction(OpenFromOverlayAction.Options(getScroll(), appWidgetId))
+                launchProxyOverlayAction(OpenFromOverlayAction.Options(getScroll(), appWidgetId))
             }else{
                 unlockAndInvoke {
                     viewModel.onOptionsClicked(appWidgetId)
@@ -832,6 +796,24 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         }
     }
 
+    private fun launchOverlayAction(action: OpenFromOverlayAction) {
+        val intent = ExpandedActivity.createExportedOverlayIntent(requireContext()).apply {
+            putExtra(ExpandedProxyFragment.EXTRA_OPEN_ACTION, action)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        unlockAndLaunch(intent)
+    }
+
+    private fun launchProxyOverlayAction(action: OpenFromOverlayAction) {
+        val intent = ExpandedProxyActivity.createProxyIntent(requireContext()).apply {
+            putExtra(ExpandedProxyFragment.EXTRA_OPEN_ACTION, action)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        unlockAndLaunch(intent)
+    }
+
     override fun onScrollChange(
         view: View?, scrollX: Int, scrollY: Int, oldScrollX: Int, oldScrollY: Int
     ) {
@@ -842,33 +824,6 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
 
     override fun trampolineLaunch(pendingIntent: PendingIntent) {
         OverlayTrampolineActivity.trampoline(requireContext(), pendingIntent)
-    }
-
-    private fun getAndClearOverlayAction(): OpenFromOverlayAction? {
-        return requireActivity().intent.run {
-            getParcelableExtraCompat(EXTRA_OPEN_ACTION, OpenFromOverlayAction::class.java).also {
-                removeExtra(EXTRA_OPEN_ACTION)
-            }
-        }
-    }
-
-    private fun getAndClearOverlayTarget(): OpenFromOverlayAction.OpenTarget? {
-        return requireActivity().intent.run {
-            getStringExtra(EXTRA_OPEN_TARGET).also {
-                removeExtra(EXTRA_OPEN_TARGET)
-            }?.let {
-                OpenFromOverlayAction.OpenTarget(it)
-            }
-        }
-    }
-
-    private fun launchOverlayAction(action: OpenFromOverlayAction) {
-        val intent = ExpandedActivity.createExportedOverlayIntent(requireContext()).apply {
-            putExtra(EXTRA_OPEN_ACTION, action)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        }
-        unlockAndLaunch(intent)
     }
 
     private fun getScroll() = with(binding.expandedNestedScroll) {
