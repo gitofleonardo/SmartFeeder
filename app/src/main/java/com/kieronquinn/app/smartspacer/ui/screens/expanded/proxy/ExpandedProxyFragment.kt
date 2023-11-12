@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import com.kieronquinn.app.smartspacer.databinding.FragmentExpandedProxyBinding
 import com.kieronquinn.app.smartspacer.ui.base.BoundFragment
 import com.kieronquinn.app.smartspacer.ui.screens.expanded.ExpandedFragment
@@ -25,6 +26,13 @@ class ExpandedProxyFragment : BoundFragment<FragmentExpandedProxyBinding>(Fragme
 
     private val viewModel by viewModel<ExpandedProxyViewModel>()
 
+    private val widgetConfigureResult = registerForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) {
+        requireActivity().finish()
+    }
+
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         view.background = ColorDrawable(Color.TRANSPARENT)
@@ -41,7 +49,16 @@ class ExpandedProxyFragment : BoundFragment<FragmentExpandedProxyBinding>(Fragme
             is ExpandedFragment.OpenFromOverlayAction.Options -> {
                 viewModel.onOptionsClicked(action.appWidgetId)
             }
-            else -> { }
+            is ExpandedFragment.OpenFromOverlayAction.ConfigureWidget -> {
+                viewModel.onConfigureWidgetClicked(
+                    widgetConfigureResult,
+                    action.info,
+                    action.id,
+                    action.config,
+                    action.appWidgetId
+                )
+            }
+            else -> { requireActivity().finish() }
         }
     }
 

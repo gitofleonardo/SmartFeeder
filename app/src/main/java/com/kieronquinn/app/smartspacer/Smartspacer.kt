@@ -350,6 +350,7 @@ class Smartspacer: Application(), Configuration.Provider {
         ) }
         viewModel<ExpandedProxyViewModel> { ExpandedProxyViewModelImpl(
             get(),
+            get(),
             get()
         ) }
         viewModel<ExpandedSettingsViewModel> { ExpandedSettingsViewModelImpl(get(), get(), get()) }

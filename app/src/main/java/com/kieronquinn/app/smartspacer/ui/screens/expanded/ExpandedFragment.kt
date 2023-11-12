@@ -592,7 +592,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
         config: CustomExpandedAppWidgetConfig?
     ) {
         if(isOverlay){
-            launchOverlayAction(OpenFromOverlayAction.ConfigureWidget(info, id, config, getScroll()))
+            launchOverlayAction(OpenFromOverlayAction.ConfigureWidget(info, id, config, null, getScroll()))
         }else{
             unlockAndInvoke {
                 viewModel.onConfigureWidgetClicked(
@@ -604,6 +604,15 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
                 )
             }
         }
+    }
+
+    private fun onConfigureWidgetClicked(
+        info: AppWidgetProviderInfo,
+        id: String?,
+        config: CustomExpandedAppWidgetConfig?,
+        appWidgetId: Int?
+    ) {
+        launchProxyOverlayAction(OpenFromOverlayAction.ConfigureWidget(info, id, config, appWidgetId, getScroll()))
     }
 
     override fun onAddWidgetClicked() {
@@ -785,6 +794,18 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
                 }
             }
         }
+        popupView.expandedLongPressPopupConfigure.setTextColor(textColour)
+        popupView.expandedLongPressPopupConfigure.iconTint = ColorStateList.valueOf(textColour)
+        popupView.expandedLongPressPopupConfigure.isVisible = widget.provider.configure != null
+        popupView.expandedLongPressPopupConfigure.setOnClickListener {
+            popup.dismiss()
+            onConfigureWidgetClicked(
+                widget.provider,
+                widget.id,
+                widget.config,
+                widget.appWidgetId
+            )
+        }
         this.popup = popup
         startDrag(viewHolder)
     }
@@ -838,6 +859,7 @@ class ExpandedFragment: BoundFragment<FragmentExpandedBinding>(
             val info: AppWidgetProviderInfo,
             val id: String?,
             val config: CustomExpandedAppWidgetConfig?,
+            val appWidgetId: Int?,
             override val scrollPosition: Int
         ): OpenFromOverlayAction(scrollPosition)
         @Parcelize
